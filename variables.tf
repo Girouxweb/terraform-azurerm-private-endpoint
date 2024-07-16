@@ -17,54 +17,15 @@ variable "name" {
   }
 }
 
-# This is required for most resource modules
 variable "resource_group_name" {
   type        = string
-  description = "The resource group where the resources will be deployed."
+  description = "The resource group where the resources will be deployed. Either the name of the new resource group to create or the name of an existing resource group."
 }
-
-variable "customer_managed_key" {
-  type = object({
-    key_vault_resource_id = string
-    key_name              = string
-    key_version           = optional(string, null)
-    user_assigned_identity = optional(object({
-      resource_id = string
-    }), null)
-  })
-  default     = null
-  description = <<DESCRIPTION
-    Defines a customer managed key to use for encryption.
-
-    object({
-      key_vault_resource_id              = (Required) - The full Azure Resource ID of the key_vault where the customer managed key will be referenced from.
-      key_name                           = (Required) - The key name for the customer managed key in the key vault.
-      key_version                        = (Optional) - The version of the key to use
-      user_assigned_identity_resource_id = (Optional) - The user assigned identity to use when access the key vault
-    })
-
-    Example Inputs:
-    ```terraform
-    customer_managed_key = {
-      key_vault_resource_id = "/subscriptions/0000000-0000-0000-0000-000000000000/resourceGroups/test-resource-group/providers/Microsoft.KeyVault/vaults/example-key-vault"
-      key_name              = "sample-customer-key"
-    }
-    ```
-   DESCRIPTION
-}
-
-variable "lock" {
-  type = object({
-    name = optional(string, null)
-    kind = string
-  })
-  default     = null
-  description = "The lock level to apply. Default is `None`. Possible values are `None`, `CanNotDelete`, and `ReadOnly`."
-
-  validation {
-    condition     = var.lock != null ? contains(["CanNotDelete", "ReadOnly"], var.lock.kind) : true
-    error_message = "Lock kind must be either `\"CanNotDelete\"` or `\"ReadOnly\"`."
-  }
+variable "resource_group_creation_enabled" {
+  type        = bool
+  default     = true
+  description = "This variable controls whether or not the resource group should be created. If set to false, the resource group must be created elsewhere and the resource group name must be provided to the module. If set to true, the resource group will be created by the module using the name provided in `resource_group_name`."
+  nullable    = false
 }
 
 variable "private_endpoints" {
@@ -78,7 +39,6 @@ variable "private_endpoints" {
       condition                              = optional(string, null)
       condition_version                      = optional(string, null)
       delegated_managed_identity_resource_id = optional(string, null)
-      principal_type                         = optional(string, null)
     })), {})
     lock = optional(object({
       kind = string
@@ -86,7 +46,6 @@ variable "private_endpoints" {
     }), null)
     tags                                    = optional(map(string), null)
     subnet_resource_id                      = string
-    subresource_name                        = string
     private_dns_zone_group_name             = optional(string, "default")
     private_dns_zone_resource_ids           = optional(set(string), [])
     application_security_group_associations = optional(map(string), {})
@@ -99,27 +58,36 @@ variable "private_endpoints" {
       private_ip_address = string
     })), {})
   }))
-  default     = {}
   description = <<DESCRIPTION
-A map of private endpoints to create on the resource. The map key is deliberately arbitrary to avoid issues where map keys maybe unknown at plan time.
+A map of private endpoints to create on this resource. The map key is deliberately arbitrary to avoid issues where map keys maybe unknown at plan time.
 
 - `name` - (Optional) The name of the private endpoint. One will be generated if not set.
 - `role_assignments` - (Optional) A map of role assignments to create on the private endpoint. The map key is deliberately arbitrary to avoid issues where map keys maybe unknown at plan time. See `var.role_assignments` for more information.
 - `lock` - (Optional) The lock level to apply to the private endpoint. Default is `None`. Possible values are `None`, `CanNotDelete`, and `ReadOnly`.
 - `tags` - (Optional) A mapping of tags to assign to the private endpoint.
 - `subnet_resource_id` - The resource ID of the subnet to deploy the private endpoint in.
-- `subresource_name` - The service name of the private endpoint.  Possible value are `blob`, 'dfs', 'file', `queue`, `table`, and `web`.
 - `private_dns_zone_group_name` - (Optional) The name of the private DNS zone group. One will be generated if not set.
 - `private_dns_zone_resource_ids` - (Optional) A set of resource IDs of private DNS zones to associate with the private endpoint. If not set, no zone groups will be created and the private endpoint will not be associated with any private DNS zones. DNS records must be managed external to this module.
 - `application_security_group_resource_ids` - (Optional) A map of resource IDs of application security groups to associate with the private endpoint. The map key is deliberately arbitrary to avoid issues where map keys maybe unknown at plan time.
 - `private_service_connection_name` - (Optional) The name of the private service connection. One will be generated if not set.
 - `network_interface_name` - (Optional) The name of the network interface. One will be generated if not set.
 - `location` - (Optional) The Azure location where the resources will be deployed. Defaults to the location of the resource group.
-- `resource_group_name` - (Optional) The resource group where the resources will be deployed. Defaults to the resource group of the resource.
+- `resource_group_name` - (Optional) The resource group where the resources will be deployed. Defaults to the resource group of this resource.
 - `ip_configurations` - (Optional) A map of IP configurations to create on the private endpoint. If not specified the platform will create one. The map key is deliberately arbitrary to avoid issues where map keys maybe unknown at plan time.
   - `name` - The name of the IP configuration.
   - `private_ip_address` - The private IP address of the IP configuration.
 DESCRIPTION
+  nullable    = false
+}
+
+# This variable is used to determine if the private_dns_zone_group block should be included,
+# or if it is to be managed externally, e.g. using Azure Policy.
+# https://github.com/Azure/terraform-azurerm-avm-res-keyvault-vault/issues/32
+# Alternatively you can use AzAPI, which does not have this issue.
+variable "private_endpoints_manage_dns_zone_group" {
+  type        = bool
+  default     = true
+  description = "Whether to manage private DNS zone groups with this module. If set to false, you must manage private DNS zone groups externally, e.g. using Azure Policy."
   nullable    = false
 }
 
@@ -132,11 +100,10 @@ variable "role_assignments" {
     condition                              = optional(string, null)
     condition_version                      = optional(string, null)
     delegated_managed_identity_resource_id = optional(string, null)
-    principal_type                         = optional(string, null)
   }))
   default     = {}
   description = <<DESCRIPTION
-A map of role assignments to create on the resource. The map key is deliberately arbitrary to avoid issues where map keys maybe unknown at plan time.
+A map of role assignments to create on this resource. The map key is deliberately arbitrary to avoid issues where map keys maybe unknown at plan time.
 
 - `role_definition_id_or_name` - The ID or name of the role definition to assign to the principal.
 - `principal_id` - The ID of the principal to assign the role to.
@@ -153,17 +120,5 @@ DESCRIPTION
 variable "tags" {
   type        = map(string)
   default     = null
-  description = "Custom tags to apply to the resource."
-}
-
-variable "use_nested_nacl" {
-  type        = bool
-  default     = false
-  description = <<DESCRIPTION
-    Controls whether or not to use nested network ACLs for this resource.
-    Nested network ACLs are used to apply network ACLs to the subresources of the storage account, such as blob containers and queues.
-
-    - If set to `true`, nested network ACLs will be used and will override any network rules. NACL resource will be created to support scenarios like Azure policy for storage accounts.
-    - If set to `false`, nested network ACLs will not be used and "azurerm_storage_account_network_rules" resource will be leveraged.
-    DESCRIPTION
+  description = "(Optional) Tags of the resource."
 }
