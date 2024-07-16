@@ -27,10 +27,11 @@ resource "azurerm_role_assignment" "this" {
 
 
 resource "azurerm_private_endpoint" "this_managed_dns_zone_groups" {
+  for_each = { for k, v in var.private_endpoints : k => v if var.private_endpoints_manage_dns_zone_group }
 
-  location                      = var.location
-  name                          = var.name
-  resource_group_name           = var.resource_group_creation_enabled ? azurerm_resource_group.this[0].name : var.resource_group_name
+  location                      = each.value.location != null ? each.value.location : var.location
+  name                          = each.value.name != null ? each.value.name : "pe-${var.name}"
+  resource_group_name           = var.resource_group_name != null ? var.resource_group_name : var.resource_group_creation_enabled ? azurerm_resource_group.this[0].name : var.resource_group_name
   subnet_id                     = each.value.subnet_resource_id
   custom_network_interface_name = each.value.network_interface_name
   tags                          = each.value.tags

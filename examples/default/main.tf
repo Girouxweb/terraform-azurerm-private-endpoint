@@ -130,5 +130,11 @@ data "azurerm_role_definition" "example" {
   name = "Contributor"
 }
 
-module "test" {
-  source              = "../../"
+resource "azurerm_role_assignment" "example" {
+  principal_id       = azurerm_user_assigned_identity.example_identity.principal_id
+  role_definition_id = data.azurerm_role_definition.example.id
+  scope              = azurerm_resource_group.this.id
+}
+
+module "private_endpoint" {
+  source = "../../"

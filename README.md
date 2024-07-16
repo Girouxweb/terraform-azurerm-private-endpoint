@@ -101,7 +101,7 @@ map(object({
 
 ### <a name="input_resource_group_name"></a> [resource\_group\_name](#input\_resource\_group\_name)
 
-Description: The resource group where the resources will be deployed.
+Description: The resource group where the resources will be deployed. Either the name of the new resource group to create or the name of an existing resource group.
 
 Type: `string`
 
@@ -119,11 +119,11 @@ Default: `true`
 
 ### <a name="input_resource_group_creation_enabled"></a> [resource\_group\_creation\_enabled](#input\_resource\_group\_creation\_enabled)
 
-Description: Whether or not to create a new resource group for the resources.
+Description: This variable controls whether or not the resource group should be created. If set to false, the resource group must be created elsewhere and the resource group name must be provided to the module. If set to true, the resource group will be created by the module using the name provided in `resource_group_name`.
 
 Type: `bool`
 
-Default: `false`
+Default: `true`
 
 ### <a name="input_role_assignments"></a> [role\_assignments](#input\_role\_assignments)
 
