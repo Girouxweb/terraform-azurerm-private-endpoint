@@ -32,19 +32,6 @@ The following resources are used by this module:
 
 The following input variables are required:
 
-### <a name="input_location"></a> [location](#input\_location)
-
-Description: Azure region where the resource should be deployed.  
-If null, the location will be inferred from the resource group location.
-
-Type: `string`
-
-### <a name="input_name"></a> [name](#input\_name)
-
-Description: The name of the resource.
-
-Type: `string`
-
 ### <a name="input_private_endpoints"></a> [private\_endpoints](#input\_private\_endpoints)
 
 Description: A map of private endpoints to create on this resource. The map key is deliberately arbitrary to avoid issues where map keys maybe unknown at plan time.
@@ -99,15 +86,17 @@ map(object({
   }))
 ```
 
-### <a name="input_resource_group_name"></a> [resource\_group\_name](#input\_resource\_group\_name)
-
-Description: The resource group where the resources will be deployed. Either the name of the new resource group to create or the name of an existing resource group.
-
-Type: `string`
-
 ## Optional Inputs
 
 The following input variables are optional (have default values):
+
+### <a name="input_location"></a> [location](#input\_location)
+
+Description: The Azure location where the resources will be deployed.
+
+Type: `string`
+
+Default: `null`
 
 ### <a name="input_private_endpoints_manage_dns_zone_group"></a> [private\_endpoints\_manage\_dns\_zone\_group](#input\_private\_endpoints\_manage\_dns\_zone\_group)
 
@@ -124,6 +113,14 @@ Description: This variable controls whether or not the resource group should be 
 Type: `bool`
 
 Default: `true`
+
+### <a name="input_resource_group_name"></a> [resource\_group\_name](#input\_resource\_group\_name)
+
+Description: The name of the resource group to deploy the private endpoints in. If not set, the resource group will be created by the module.
+
+Type: `string`
+
+Default: `null`
 
 ### <a name="input_role_assignments"></a> [role\_assignments](#input\_role\_assignments)
 
